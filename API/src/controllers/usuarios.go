@@ -1,11 +1,13 @@
 package controllers
 
 import (
+	"api/src/autenticacao"
 	"api/src/banco"
 	"api/src/models"
 	"api/src/repositorios"
 	"api/src/responstas"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -104,6 +106,17 @@ func AtualizarUsuario(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	usuarioIDNoToken, erro := autenticacao.ExtrairUsuarioID(r)
+	if erro != nil {
+		responstas.Erro(w, http.StatusUnauthorized, erro)
+		return
+	}
+
+	if usuarioIDNoToken != usuarioID {
+		responstas.Erro(w, http.StatusForbidden, errors.New("Não é possivel ataulizar esse usuário"))
+		return
+	}
+
 	corpoRequest, erro := ioutil.ReadAll(r.Body)
 	if erro != nil {
 		responstas.Erro(w, http.StatusUnprocessableEntity, erro)
@@ -143,6 +156,17 @@ func DeletarUsuario(w http.ResponseWriter, r *http.Request) {
 	usuarioID, erro := strconv.ParseUint(parametros["usuarioId"], 10, 64)
 	if erro != nil {
 		responstas.Erro(w, http.StatusBadRequest, erro)
+		return
+	}
+
+	usuarioIDNoToken, erro := autenticacao.ExtrairUsuarioID(r)
+	if erro != nil {
+		responstas.Erro(w, http.StatusUnauthorized, erro)
+		return
+	}
+
+	if usuarioIDNoToken != usuarioID {
+		responstas.Erro(w, http.StatusForbidden, errors.New("Não é possivel deletar esse usuário"))
 		return
 	}
 

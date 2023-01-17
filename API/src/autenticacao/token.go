@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -50,4 +51,23 @@ func retornarChaveDeVerificacao(token *jwt.Token) (interface{}, error) {
 		return nil, fmt.Errorf("Método de assinatura inesperado! %v", token.Header["alg"])
 	}
 	return config.SecretKey, nil
+}
+
+// Retornar o usuarioId que esta no token
+func ExtrairUsuarioID(r *http.Request) (uint64, error) {
+	tokenString := extrairToken(r)
+	token, erro := jwt.Parse(tokenString, retornarChaveDeVerificacao)
+	if erro != nil {
+		return 0, erro
+	}
+
+	if permissoes, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		usuarioID, erro := strconv.ParseUint(fmt.Sprintf("%.0f", permissoes["usuarioId"]), 10, 64)
+		if erro != nil {
+			return 0, erro
+		}
+		return usuarioID, nil
+	}
+
+	return 0, errors.New("Token Invalido")
 }
