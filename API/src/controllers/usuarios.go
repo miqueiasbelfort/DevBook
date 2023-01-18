@@ -222,3 +222,88 @@ func SeguirUsuario(w http.ResponseWriter, r *http.Request) {
 	responstas.JSON(w, http.StatusNoContent, nil)
 
 }
+
+func ParaDeSeguirUsuario(w http.ResponseWriter, r *http.Request) {
+	seguidorID, erro := autenticacao.ExtrairUsuarioID(r)
+	if erro != nil {
+		responstas.Erro(w, http.StatusUnauthorized, erro)
+		return
+	}
+
+	parametros := mux.Vars(r)
+	usuarioID, erro := strconv.ParseUint(parametros["usuarioId"], 10, 64)
+	if erro != nil {
+		responstas.Erro(w, http.StatusBadRequest, erro)
+		return
+	}
+
+	if seguidorID == usuarioID {
+		responstas.Erro(w, http.StatusForbidden, errors.New("Não é possivel para de seguir você mesmo"))
+		return
+	}
+
+	db, erro := banco.Conectar()
+	if erro != nil {
+		responstas.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+	defer db.Close()
+
+	repositorio := repositorios.NovoRepositorioDeUsuarios(db)
+	if erro = repositorio.ParaDeSeguir(usuarioID, seguidorID); erro != nil {
+		responstas.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+
+}
+
+func BuscarSeguidores(w http.ResponseWriter, r *http.Request) {
+	parametros := mux.Vars(r)
+	usuarioID, erro := strconv.ParseUint(parametros["usuarioId"], 10, 64)
+	if erro != nil {
+		responstas.Erro(w, http.StatusBadRequest, erro)
+		return
+	}
+
+	db, erro := banco.Conectar()
+	if erro != nil {
+		responstas.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+	defer db.Close()
+
+	repositorio := repositorios.NovoRepositorioDeUsuarios(db)
+	seguidores, erro := repositorio.BuscarSeguidores(usuarioID)
+	if erro != nil {
+		responstas.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+
+	responstas.JSON(w, http.StatusOK, seguidores)
+
+}
+
+func BuscarSeguido(w http.ResponseWriter, r *http.Request) {
+	parametros := mux.Vars(r)
+	usuarioID, erro := strconv.ParseUint(parametros["usuarioId"], 10, 64)
+	if erro != nil {
+		responstas.Erro(w, http.StatusBadRequest, erro)
+		return
+	}
+
+	db, erro := banco.Conectar()
+	if erro != nil {
+		responstas.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+	defer db.Close()
+
+	repositorio := repositorios.NovoRepositorioDeUsuarios(db)
+	usuarios, erro := repositorio.BuscarSeguindo(usuarioID)
+	if erro != nil {
+		responstas.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+
+	responstas.JSON(w, http.StatusOK, usuarios)
+}
