@@ -307,3 +307,24 @@ func BuscarSeguido(w http.ResponseWriter, r *http.Request) {
 
 	responstas.JSON(w, http.StatusOK, usuarios)
 }
+
+func AtualizarSenha(w http.ResponseWriter, r *http.Request) {
+	usuarioNotToken, erro := autenticacao.ExtrairUsuarioID(r)
+	if erro != nil {
+		responstas.Erro(w, http.StatusUnauthorized, erro)
+		return
+	}
+
+	parametros := mux.Vars(r)
+	usuarioID, erro := strconv.ParseUint(parametros["usuarioId"], 10, 64)
+	if erro != nil {
+		responstas.Erro(w, http.StatusBadRequest, erro)
+		return
+	}
+
+	if usuarioNotToken != usuarioID {
+		responstas.Erro(w, http.StatusForbidden, errors.New("Não é possivel atualizar um usuário que não é o seu!"))
+		return
+	}
+
+}
