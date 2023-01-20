@@ -6,6 +6,7 @@ import (
 	"api/src/models"
 	"api/src/repositorios"
 	"api/src/responstas"
+	"api/src/seguranca"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -326,5 +327,45 @@ func AtualizarSenha(w http.ResponseWriter, r *http.Request) {
 		responstas.Erro(w, http.StatusForbidden, errors.New("Não é possivel atualizar um usuário que não é o seu!"))
 		return
 	}
+
+	corpoRequest, erro := ioutil.ReadAll(r.Body)
+
+	var senha models.Senha
+	if erro = json.Unmarshal(corpoRequest, &senha); erro != nil {
+		responstas.Erro(w, http.StatusBadRequest, erro)
+		return
+	}
+
+	db, erro := banco.Conectar()
+	if erro != nil {
+		responstas.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+	defer db.Close()
+
+	repositorio := repositorios.NovoRepositorioDeUsuarios(db)
+	senhaSalvaNoBanco, erro := repositorio.BuscarSenha(usuarioID)
+	if erro != nil {
+		responstas.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+
+	if erro = seguranca.VerificarSenha(senha.Atual, senhaSalvaNoBanco); erro != nil {
+		responstas.Erro(w, http.StatusUnauthorized, errors.New("A senha atual não condz com a salva"))
+		return
+	}
+
+	senhaComHash, erro := seguranca.Hash(senha.Nova)
+	if erro != nil {
+		responstas.Erro(w, http.StatusBadRequest, erro)
+		return
+	}
+
+	if erro = repositorio.AtualizarSenha(usuarioID, string(senhaComHash)); erro != nil {
+		responstas.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+
+	responstas.JSON(w, http.StatusNoContent, nil)
 
 }
